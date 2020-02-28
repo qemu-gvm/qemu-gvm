@@ -55,10 +55,12 @@
 #include "sysemu/tcg.h"
 #include "sysemu/numa.h"
 #include "sysemu/kvm.h"
+#include "sysemu/gvm.h"
 #include "sysemu/qtest.h"
 #include "sysemu/reset.h"
 #include "sysemu/runstate.h"
 #include "kvm_i386.h"
+#include "gvm_i386.h"
 #include "hw/xen/xen.h"
 #include "hw/xen/start_info.h"
 #include "ui/qemu-spice.h"
@@ -363,6 +365,9 @@ GSIState *pc_gsi_create(qemu_irq **irqs, bool pci_enabled)
     if (kvm_ioapic_in_kernel()) {
         kvm_pc_setup_irq_routing(pci_enabled);
         *irqs = qemu_allocate_irqs(kvm_pc_gsi_handler, s, GSI_NUM_PINS);
+    } else if (gvm_ioapic_in_kernel()) {
+        gvm_pc_setup_irq_routing(pci_enabled);
+        *irqs = qemu_allocate_irqs(gvm_pc_gsi_handler, s, GSI_NUM_PINS);
     } else {
         *irqs = qemu_allocate_irqs(gsi_handler, s, GSI_NUM_PINS);
     }
@@ -1080,7 +1085,7 @@ void pc_guest_info_init(PCMachineState *pcms)
     MachineState *ms = MACHINE(pcms);
     X86MachineState *x86ms = X86_MACHINE(pcms);
 
-    x86ms->apic_xrupt_override = kvm_allows_irq0_override();
+    x86ms->apic_xrupt_override = gvm_enabled() || kvm_allows_irq0_override();
     pcms->numa_nodes = ms->numa_state->num_nodes;
     pcms->node_mem = g_malloc0(pcms->numa_nodes *
                                     sizeof *pcms->node_mem);
@@ -1469,6 +1474,8 @@ void pc_i8259_create(ISABus *isa_bus, qemu_irq *i8259_irqs)
 
     if (kvm_pic_in_kernel()) {
         i8259 = kvm_i8259_init(isa_bus);
+    } else if (gvm_pic_in_kernel()) {
+        i8259 = gvm_i8259_init(isa_bus);
     } else if (xen_enabled()) {
         i8259 = xen_interrupt_controller_init();
     } else {
@@ -1490,6 +1497,8 @@ void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name)
 
     if (kvm_ioapic_in_kernel()) {
         dev = qdev_create(NULL, TYPE_KVM_IOAPIC);
+    } else if (gvm_ioapic_in_kernel()) {
+        dev = qdev_create(NULL, TYPE_GVM_IOAPIC);
     } else {
         dev = qdev_create(NULL, TYPE_IOAPIC);
     }
@@ -2041,6 +2050,8 @@ bool pc_machine_is_smm_enabled(PCMachineState *pcms)
         smm_available = true;
     } else if (kvm_enabled()) {
         smm_available = kvm_has_smm();
+    } else if (gvm_enabled()) {
+        smm_available = true;
     }
 
     if (smm_available) {
