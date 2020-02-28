@@ -42,6 +42,7 @@
 #include "sysemu/hax.h"
 #include "sysemu/hvf.h"
 #include "sysemu/whpx.h"
+#include "sysemu/gvm.h"
 #include "exec/exec-all.h"
 
 #include "qemu/thread.h"
@@ -105,7 +106,7 @@ static bool cpu_thread_is_idle(CPUState *cpu)
         return true;
     }
     if (!cpu->halted || cpu_has_work(cpu) ||
-        kvm_halt_in_kernel()) {
+        kvm_halt_in_kernel() || gvm_irqchip_in_kernel()) {
         return false;
     }
     return true;
@@ -1223,6 +1224,14 @@ static void qemu_kvm_destroy_vcpu(CPUState *cpu)
     }
 }
 
+static void qemu_gvm_destroy_vcpu(CPUState *cpu)
+{
+    if (gvm_destroy_vcpu(cpu) < 0) {
+        error_report("gvm_destroy_vcpu failed");
+        exit(EXIT_FAILURE);
+    }
+}
+
 static void qemu_tcg_destroy_vcpu(CPUState *cpu)
 {
 }
@@ -1324,6 +1333,48 @@ static void *qemu_kvm_cpu_thread_fn(void *arg)
     } while (!cpu->unplug || cpu_can_run(cpu));
 
     qemu_kvm_destroy_vcpu(cpu);
+    cpu->created = false;
+    qemu_cond_signal(&qemu_cpu_cond);
+    qemu_mutex_unlock_iothread();
+    rcu_unregister_thread();
+    return NULL;
+}
+
+static void *qemu_gvm_cpu_thread_fn(void *arg)
+{
+    CPUState *cpu = arg;
+    int r;
+
+    rcu_register_thread();
+
+    qemu_mutex_lock_iothread();
+    qemu_thread_get_self(cpu->thread);
+    cpu->thread_id = qemu_get_thread_id();
+    cpu->can_do_io = 1;
+    current_cpu = cpu;
+
+    r = gvm_init_vcpu(cpu);
+    if (r < 0) {
+        fprintf(stderr, "gvm_init_vcpu failed: %s\n", strerror(-r));
+        exit(1);
+    }
+
+    /* signal CPU creation */
+    cpu->created = true;
+    qemu_cond_signal(&qemu_cpu_cond);
+    qemu_guest_random_seed_thread_part2(cpu->random_seed);
+
+    do {
+        if (cpu_can_run(cpu)) {
+            r = gvm_cpu_exec(cpu);
+            if (r == EXCP_DEBUG) {
+                cpu_handle_guest_debug(cpu);
+            }
+        }
+        qemu_wait_io_event(cpu);
+    } while (!cpu->unplug || cpu_can_run(cpu));
+
+    qemu_gvm_destroy_vcpu(cpu);
     cpu->created = false;
     qemu_cond_signal(&qemu_cpu_cond);
     qemu_mutex_unlock_iothread();
@@ -1831,6 +1882,21 @@ static void qemu_cpu_kick_thread(CPUState *cpu)
         exit(1);
     }
 #else /* _WIN32 */
+#ifdef CONFIG_GVM
+    if (cpu->thread_kicked) {
+        return;
+    }
+    cpu->thread_kicked = true;
+    if (gvm_enabled()) {
+        //Remove assert(!qemu_cpu_is_self(cpu)) since it is triggered
+        //often during runtime. It is either QEMU common code issue
+        //or the usage here is wrong. We could address it later.
+        //Removing does not bring any harm.
+        cpu_exit(cpu);
+        gvm_raise_event(cpu);
+        return;
+    }
+#endif /* CONFIG_GVM */
     if (!qemu_cpu_is_self(cpu)) {
         if (whpx_enabled()) {
             whpx_vcpu_kick(cpu);
@@ -2101,6 +2167,22 @@ static void qemu_whpx_start_vcpu(CPUState *cpu)
 #endif
 }
 
+static void qemu_gvm_start_vcpu(CPUState *cpu)
+{
+    char thread_name[VCPU_THREAD_NAME_SIZE];
+
+    cpu->thread = g_malloc0(sizeof(QemuThread));
+    cpu->halt_cond = g_malloc0(sizeof(QemuCond));
+    qemu_cond_init(cpu->halt_cond);
+    snprintf(thread_name, VCPU_THREAD_NAME_SIZE, "CPU %d/GVM",
+             cpu->cpu_index);
+    qemu_thread_create(cpu->thread, thread_name, qemu_gvm_cpu_thread_fn,
+                       cpu, QEMU_THREAD_JOINABLE);
+#ifdef _WIN32
+    cpu->hThread = qemu_thread_get_handle(cpu->thread);
+#endif
+}
+
 static void qemu_dummy_start_vcpu(CPUState *cpu)
 {
     char thread_name[VCPU_THREAD_NAME_SIZE];
@@ -2137,6 +2219,8 @@ void qemu_init_vcpu(CPUState *cpu)
         qemu_hax_start_vcpu(cpu);
     } else if (hvf_enabled()) {
         qemu_hvf_start_vcpu(cpu);
+    } else if (gvm_enabled()) {
+        qemu_gvm_start_vcpu(cpu);
     } else if (tcg_enabled()) {
         qemu_tcg_init_vcpu(cpu);
     } else if (whpx_enabled()) {

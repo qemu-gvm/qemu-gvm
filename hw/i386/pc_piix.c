@@ -41,6 +41,7 @@
 #include "hw/ide.h"
 #include "hw/irq.h"
 #include "sysemu/kvm.h"
+#include "sysemu/gvm.h"
 #include "hw/kvm/clock.h"
 #include "sysemu/sysemu.h"
 #include "hw/sysbus.h"

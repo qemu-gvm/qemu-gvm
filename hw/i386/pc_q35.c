@@ -37,6 +37,7 @@
 #include "hw/xen/xen.h"
 #include "sysemu/kvm.h"
 #include "hw/kvm/clock.h"
+#include "sysemu/gvm.h"
 #include "hw/pci-host/q35.h"
 #include "hw/qdev-properties.h"
 #include "exec/address-spaces.h"

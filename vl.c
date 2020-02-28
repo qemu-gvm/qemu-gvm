@@ -3490,6 +3490,12 @@ int main(int argc, char **argv, char **envp)
                 olist = qemu_find_opts("machine");
                 qemu_opts_parse_noisily(olist, "accel=kvm", false);
                 break;
+#ifdef CONFIG_GVM
+            case QEMU_OPTION_enable_gvm:
+                olist = qemu_find_opts("machine");
+                qemu_opts_parse_noisily(olist, "accel=gvm", false);
+                break;
+#endif /* CONFIG_GVM */
             case QEMU_OPTION_M:
             case QEMU_OPTION_machine:
                 olist = qemu_find_opts("machine");
