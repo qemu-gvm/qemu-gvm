@@ -1,4 +1,5 @@
 obj-$(CONFIG_KVM) += kvm/
+obj-$(CONFIG_GVM) += gvm/
 obj-y += e820_memory_layout.o multiboot.o
 obj-y += x86.o
 obj-$(CONFIG_PC) += pc.o pc_sysfw.o
