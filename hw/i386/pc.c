@@ -56,10 +56,12 @@
 #include "sysemu/tcg.h"
 #include "sysemu/numa.h"
 #include "sysemu/kvm.h"
+#include "sysemu/gvm.h"
 #include "sysemu/qtest.h"
 #include "sysemu/reset.h"
 #include "sysemu/runstate.h"
 #include "kvm_i386.h"
+#include "gvm_i386.h"
 #include "hw/xen/xen.h"
 #include "hw/xen/start_info.h"
 #include "ui/qemu-spice.h"
@@ -347,6 +349,8 @@ GSIState *pc_gsi_create(qemu_irq **irqs, bool pci_enabled)
     s = g_new0(GSIState, 1);
     if (kvm_ioapic_in_kernel()) {
         kvm_pc_setup_irq_routing(pci_enabled);
+    } else if (gvm_ioapic_in_kernel()) {
+        gvm_pc_setup_irq_routing(pci_enabled);
     }
     *irqs = qemu_allocate_irqs(gsi_handler, s, GSI_NUM_PINS);
 
@@ -887,7 +891,7 @@ void pc_guest_info_init(PCMachineState *pcms)
     MachineState *ms = MACHINE(pcms);
     X86MachineState *x86ms = X86_MACHINE(pcms);
 
-    x86ms->apic_xrupt_override = kvm_allows_irq0_override();
+    x86ms->apic_xrupt_override = gvm_enabled() || kvm_allows_irq0_override();
     pcms->numa_nodes = ms->numa_state->num_nodes;
     pcms->node_mem = g_malloc0(pcms->numa_nodes *
                                     sizeof *pcms->node_mem);
@@ -1269,6 +1273,8 @@ void pc_i8259_create(ISABus *isa_bus, qemu_irq *i8259_irqs)
 
     if (kvm_pic_in_kernel()) {
         i8259 = kvm_i8259_init(isa_bus);
+    } else if (gvm_pic_in_kernel()) {
+        i8259 = gvm_i8259_init(isa_bus);
     } else if (xen_enabled()) {
         i8259 = xen_interrupt_controller_init();
     } else {
