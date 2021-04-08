@@ -332,6 +332,7 @@ vhost_user="no"
 vhost_user_blk_server="auto"
 vhost_user_fs=""
 kvm="auto"
+gvm="auto"
 hax="auto"
 hvf="auto"
 whpx="auto"
@@ -1094,6 +1095,10 @@ for opt do
   ;;
   --enable-kvm) kvm="enabled"
   ;;
+  --disable-gvm) gvm="disabled"
+  ;;
+  --enable-gvm) gvm="enabled"
+  ;;
   --disable-hax) hax="disabled"
   ;;
   --enable-hax) hax="enabled"
@@ -1781,6 +1786,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   membarrier      membarrier system call (for Linux 4.14+ or Windows)
   fdt             fdt device tree
   kvm             KVM acceleration support
+  gvm             GVM acceleration support
   hax             HAX acceleration support
   hvf             Hypervisor.framework acceleration support
   whpx            Windows Hypervisor Platform acceleration support
@@ -7005,7 +7011,7 @@ NINJA=$ninja $meson setup \
         ${staticpic:+-Db_staticpic=$staticpic} \
         -Db_coverage=$(if test "$gcov" = yes; then echo true; else echo false; fi) \
         -Dmalloc=$malloc -Dmalloc_trim=$malloc_trim -Dsparse=$sparse \
-        -Dkvm=$kvm -Dhax=$hax -Dwhpx=$whpx -Dhvf=$hvf \
+        -Dkvm=$kvm -Dgvm=$gvm -Dhax=$hax -Dwhpx=$whpx -Dhvf=$hvf \
         -Dxen=$xen -Dxen_pci_passthrough=$xen_pci_passthrough -Dtcg=$tcg \
         -Dcocoa=$cocoa -Dmpath=$mpath -Dsdl=$sdl -Dsdl_image=$sdl_image \
         -Dvnc=$vnc -Dvnc_sasl=$vnc_sasl -Dvnc_jpeg=$vnc_jpeg -Dvnc_png=$vnc_png \

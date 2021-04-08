@@ -26,6 +26,7 @@ i386_ss.add(when: 'CONFIG_PC', if_true: files(
   'port92.c'))
 
 subdir('kvm')
+subdir('gvm')
 subdir('xen')
 
 i386_ss.add_all(xenpv_ss)

@@ -85,6 +85,7 @@ if cpu in ['x86', 'x86_64']
     'CONFIG_HAX': ['i386-softmmu', 'x86_64-softmmu'],
     'CONFIG_HVF': ['x86_64-softmmu'],
     'CONFIG_WHPX': ['i386-softmmu', 'x86_64-softmmu'],
+    'CONFIG_GVM': ['x86_64-softmmu'],
   }
 endif
 
@@ -202,6 +203,13 @@ accelerators = []
 if not get_option('kvm').disabled() and targetos == 'linux'
   accelerators += 'CONFIG_KVM'
 endif
+if not get_option('gvm').disabled() and targetos == 'windows'
+  if get_option('gvm').enabled() and host_machine.cpu() != 'x86_64'
+    error('GVM requires 64-bit host')
+  else
+    accelerators += 'CONFIG_GVM'
+  endif
+endif
 if not get_option('xen').disabled() and 'CONFIG_XEN_BACKEND' in config_host
   accelerators += 'CONFIG_XEN'
   have_xen_pci_passthrough = not get_option('xen_pci_passthrough').disabled() and targetos == 'linux'
@@ -242,6 +250,9 @@ endif
 
 if 'CONFIG_KVM' not in accelerators and get_option('kvm').enabled()
   error('KVM not available on this platform')
+endif
+if 'CONFIG_GVM' not in accelerators and get_option('gvm').enabled()
+  error('GVM not available on this platform')
 endif
 if 'CONFIG_HVF' not in accelerators and get_option('hvf').enabled()
   error('HVF not available on this platform')
@@ -2104,6 +2115,7 @@ summary_info += {'Linux io_uring support': config_host.has_key('CONFIG_LINUX_IO_
 summary_info += {'ATTR/XATTR support': config_host.has_key('CONFIG_ATTR')}
 summary_info += {'Install blobs':     get_option('install_blobs')}
 summary_info += {'KVM support':       config_all.has_key('CONFIG_KVM')}
+summary_info += {'GVM support':       config_all.has_key('CONFIG_GVM')}
 summary_info += {'HAX support':       config_all.has_key('CONFIG_HAX')}
 summary_info += {'HVF support':       config_all.has_key('CONFIG_HVF')}
 summary_info += {'WHPX support':      config_all.has_key('CONFIG_WHPX')}
