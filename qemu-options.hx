@@ -3944,6 +3944,14 @@ SRST
     available if KVM support is enabled when compiling.
 ERST
 
+DEF("enable-gvm", 0, QEMU_OPTION_enable_gvm, \
+    "-enable-gvm     enable GVM full virtualization support\n", QEMU_ARCH_I386)
+SRST
+``-enable-gvm``
+    Enable GVM full virtualization support. This option is only
+    available if GVM support is enabled when compiling.
+ERST
+
 DEF("xen-domid", HAS_ARG, QEMU_OPTION_xen_domid,
     "-xen-domid id   specify xen guest domain id\n", QEMU_ARCH_ALL)
 DEF("xen-attach", 0, QEMU_OPTION_xen_attach,

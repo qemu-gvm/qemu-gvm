@@ -1622,7 +1622,7 @@ typedef struct CPUX86State {
     int64_t tsc_khz;
     int64_t user_tsc_khz; /* for sanity check only */
     uint64_t apic_bus_freq;
-#if defined(CONFIG_KVM) || defined(CONFIG_HVF)
+#if defined(CONFIG_KVM) || defined(CONFIG_GVM) || defined(CONFIG_HVF)
     void *xsave_buf;
 #endif
 #if defined(CONFIG_KVM)
@@ -1653,6 +1653,7 @@ typedef struct CPUX86State {
 } CPUX86State;
 
 struct kvm_msrs;
+struct gvm_msrs;
 
 /**
  * X86CPU:
@@ -1774,6 +1775,8 @@ struct X86CPU {
     Notifier machine_done;
 
     struct kvm_msrs *kvm_msr_buf;
+
+    struct gvm_msrs *gvm_msr_buf;
 
     int32_t node_id; /* NUMA node this CPU belongs to */
     int32_t socket_id;
@@ -2147,6 +2150,7 @@ void apic_handle_tpr_access_report(DeviceState *d, target_ulong ip,
  * are already present in the kvm_default_props table.
  */
 void x86_cpu_change_kvm_default(const char *prop, const char *value);
+void x86_cpu_change_gvm_default(const char *prop, const char *value);
 
 /* Special values for X86CPUVersion: */
 

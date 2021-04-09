@@ -89,7 +89,8 @@ bool cpu_thread_is_idle(CPUState *cpu)
         return true;
     }
     if (!cpu->halted || cpu_has_work(cpu) ||
-        kvm_halt_in_kernel() || whpx_apic_in_platform()) {
+        kvm_halt_in_kernel() || whpx_apic_in_platform() ||
+	gvm_irqchip_in_kernel()) {
         return false;
     }
     return true;
