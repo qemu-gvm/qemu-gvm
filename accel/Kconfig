@@ -16,6 +16,9 @@ config TCG
 config KVM
     bool
 
+config GVM
+    bool
+
 config XEN
     bool
     select FSDEV_9P if VIRTFS

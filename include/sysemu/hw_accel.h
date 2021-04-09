@@ -14,6 +14,7 @@
 #include "hw/core/cpu.h"
 #include "sysemu/hax.h"
 #include "sysemu/kvm.h"
+#include "sysemu/gvm.h"
 #include "sysemu/hvf.h"
 #include "sysemu/whpx.h"
 #include "sysemu/nvmm.h"

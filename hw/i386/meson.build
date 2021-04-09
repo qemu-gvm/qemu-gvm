@@ -30,6 +30,7 @@ i386_ss.add(when: 'CONFIG_X86_FW_OVMF', if_true: files('pc_sysfw_ovmf.c'),
                                         if_false: files('pc_sysfw_ovmf-stubs.c'))
 
 subdir('kvm')
+subdir('gvm')
 subdir('xen')
 
 i386_ss.add_all(xenpv_ss)

@@ -134,6 +134,7 @@ if cpu in ['x86', 'x86_64']
     'CONFIG_HVF': ['x86_64-softmmu'],
     'CONFIG_NVMM': ['i386-softmmu', 'x86_64-softmmu'],
     'CONFIG_WHPX': ['i386-softmmu', 'x86_64-softmmu'],
+    'CONFIG_GVM': ['x86_64-softmmu'],
   }
 endif
 
@@ -396,6 +397,13 @@ accelerators = []
 if get_option('kvm').allowed() and targetos == 'linux'
   accelerators += 'CONFIG_KVM'
 endif
+if get_option('gvm').allowed() and targetos == 'windows'
+  if get_option('gvm').enabled() and host_machine.cpu() != 'x86_64'
+    error('GVM requires 64-bit host')
+  else
+    accelerators += 'CONFIG_GVM'
+  endif
+endif
 if get_option('whpx').allowed() and targetos == 'windows'
   if get_option('whpx').enabled() and host_machine.cpu() != 'x86_64'
     error('WHPX requires 64-bit host')
@@ -457,6 +465,9 @@ endif
 
 if 'CONFIG_KVM' not in accelerators and get_option('kvm').enabled()
   error('KVM not available on this platform')
+endif
+if 'CONFIG_GVM' not in accelerators and get_option('gvm').enabled()
+  error('GVM not available on this platform')
 endif
 if 'CONFIG_HVF' not in accelerators and get_option('hvf').enabled()
   error('HVF not available on this platform')
@@ -3831,6 +3842,7 @@ endif
 summary_info = {}
 if have_system
   summary_info += {'KVM support':       config_all.has_key('CONFIG_KVM')}
+  summary_info += {'GVM support':       config_all.has_key('CONFIG_GVM')}
   summary_info += {'HAX support':       config_all.has_key('CONFIG_HAX')}
   summary_info += {'HVF support':       config_all.has_key('CONFIG_HVF')}
   summary_info += {'WHPX support':      config_all.has_key('CONFIG_WHPX')}
